@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jumma — AI Chatbot</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; padding:0; }
+    .chatbox { max-width:600px; margin:40px auto; padding:20px; background:#222; border-radius:10px; height:80vh; display:flex; flex-direction:column; }
+    .messages { flex:1; overflow-y:auto; padding:10px; }
+    .msg { margin:8px 0; padding:10px 15px; border-radius:20px; max-width:70%; }
+    .user { background:#4CAF50; color:#fff; margin-left:auto; text-align:right; }
+    .jumma { background:#555; color:#fff; margin-right:auto; text-align:left; }
+    .input-area { display:flex; }
+    input { flex:1; padding:10px; border:none; border-radius:5px; }
+    button { padding:10px 15px; border:none; margin-left:5px; border-radius:5px; cursor:pointer; }
+    #darkBtn { background:#f39c12; color:#000; margin-left:10px; }
+    .light { background:#f4f4f4; color:#222; }
+    .light .chatbox { background:#fff; color:#000; }
+    .light .jumma { background:#ddd; color:#000; }
+    .light .user { background:#007BFF; }
+  </style>
+</head>
+<body>
+  <div style="text-align:center; padding:10px;">
+    <button id="darkBtn">Toggle Dark/Light</button>
+  </div>
+  <div class="chatbox">
+    <div id="messages" class="messages"></div>
+    <div class="input-area">
+      <input id="userInput" placeholder="Type a message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+<script>
+let darkMode = true;
+document.getElementById("darkBtn").onclick = () => {
+  document.body.classList.toggle("light");
+  darkMode = !darkMode;
+};
+
+// Add message to chat
+function addMessage(text, sender){
+  let div = document.createElement("div");
+  div.className = "msg " + sender;
+  div.innerText = text;
+  document.getElementById("messages").appendChild(div);
+  document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+}
+
+// Send user input
+async function sendMessage(){
+  let input = document.getElementById("userInput");
+  let msg = input.value.trim();
+  if(!msg) return;
+  addMessage(msg, "user");
+  input.value = "";
+
+  let reply = await fetchReply(msg);
+  addMessage(reply, "jumma");
+}
+
+// Fetch from backend
+async function fetchReply(msg){
+  try{
+    let res = await fetch("http://localhost:5000/api/jumma", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message:msg})
+    });
+    let j = await res.json();
+    return j.reply;
+  }catch(e){
+    console.error(e);
+    return "Error connecting to Jumma AI server.";
+  }
+}
+</script>
+</body>
+</html>
