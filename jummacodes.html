@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jumma — AI Chatbot</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#0f1724; --muted:#98a0b3; --accent:#7c5cff; --bubble:#1b2433; --you:#1f2937;
+      --glass: rgba(255,255,255,0.02);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#04050a 0%, #0b1220 100%);color:#e6eef8}
+    .container{max-width:960px;margin:28px auto;padding:20px}
+    header{display:flex;gap:16px;align-items:center}
+    .logo{display:flex;gap:12px;align-items:center}
+    .avatar{width:72px;height:72px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#3dd6c1);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;color:#021124;box-shadow:0 6px 18px rgba(124,92,255,0.18)}
+    h1{margin:0;font-size:20px;letter-spacing:0.6px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .card{margin-top:18px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:16px;box-shadow:0 6px 24px rgba(2,6,23,0.6);}
+
+    .chat{height:62vh;min-height:380px;display:flex;flex-direction:column;gap:12px;padding:14px;overflow:auto;border-radius:10px;background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);}
+
+    .msg{display:flex;gap:12px;align-items:flex-end}
+    .msg.jumma{align-self:flex-start}
+    .msg.you{align-self:flex-end;flex-direction:row-reverse}
+
+    .bubble{max-width:78%;padding:12px 14px;border-radius:14px;background:var(--bubble);color:#e6eef8;font-size:15px;line-height:1.35}
+    .bubble.you{background:var(--you);}
+    .meta{font-size:11px;color:var(--muted);margin-top:6px}
+
+    .input-row{display:flex;gap:10px;margin-top:12px}
+    .input{flex:1;display:flex;gap:10px}
+    input[type="text"]{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit;outline:none}
+    button.send{background:linear-gradient(90deg,var(--accent),#3dd6c1);border:none;padding:10px 14px;border-radius:12px;color:#021124;font-weight:700;cursor:pointer}
+
+    .small{font-size:13px;color:var(--muted)}
+    footer.controls{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .settings{display:flex;gap:8px;align-items:center}
+    .chip{background:var(--glass);padding:8px;border-radius:10px;font-size:13px}
+
+    .typing{display:inline-block;height:8px;width:36px}
+    .dot{display:inline-block;margin-right:5px;width:8px;height:8px;border-radius:50%;background:#9fb3ff;opacity:0.4;animation:bl 1s infinite}
+    .dot:nth-child(2){animation-delay:0.15s}
+    .dot:nth-child(3){animation-delay:0.3s}
+    @keyframes bl{0%{opacity:0.2;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}100%{opacity:0.2;transform:translateY(0)}}
+
+    @media (max-width:600px){.container{margin:8px;padding:12px}.avatar{width:56px;height:56px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="avatar" id="siteAvatar">J</div>
+        <div>
+          <h1>Jumma — Your Pocket AI coded by "ARHAAN TECH</h1>
+          <p class="lead">Chat, ask Wikipedia, do quick math, and listen—right from your browser.</p>
+        </div>
+      </div>
+      <div style="margin-left:auto" class="small">Built for GitHub Pages • Works on mobile</div>
+    </header>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px">
+        <div class="small">Conversation</div>
+        <div class="settings">
+          <label class="chip"><input type="checkbox" id="enableVoice" checked /> Voice</label>
+          <label class="chip"><input type="checkbox" id="saveHistory" checked /> Save</label>
+          <button id="clearBtn" class="chip">Clear</button>
+        </div>
+      </div>
+
+      <div id="chat" class="chat" aria-live="polite"></div>
+
+      <div class="input-row">
+        <div class="input">
+          <input id="textInput" type="text" placeholder="Ask Jumma (try: Who is Ada Lovelace? or 12/4+3)" />
+          <button id="sendBtn" class="send">Send</button>
+        </div>
+      </div>
+
+      <footer class="controls">
+        <div class="small">Tip: prefix with <code>wiki:</code> for direct Wikipedia (e.g. <code>wiki:Albert Einstein</code>)</div>
+        <div class="small">Made with ❤️</div>
+      </footer>
+    </div>
+  </div>
+
+<script>
+  const chatEl = document.getElementById('chat');
+  const input = document.getElementById('textInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const enableVoice = document.getElementById('enableVoice');
+  const clearBtn = document.getElementById('clearBtn');
+  const saveHistory = document.getElementById('saveHistory');
+  const siteAvatar = document.getElementById('siteAvatar');
+
+  // Avatar fallback
+  const AVATAR_URL = 'https://images.unsplash.com/photo-1549122728-f519709caa9c?q=80&w=400&auto=format&fit=crop&crop=faces';
+  const img = new Image(); 
+  img.onload = ()=>{ siteAvatar.style.backgroundImage = `url(${AVATAR_URL})`; siteAvatar.style.backgroundSize = 'cover'; siteAvatar.textContent=''; }  
+  img.onerror = ()=>{ }  
+  img.src = AVATAR_URL;
+
+  const LS_KEY = 'jumma_chat_history_v2';
+
+  function safeEvalMath(expr){
+    if(!/^[0-9\s+\-*/().%]+$/.test(expr)) return null;
+    try{ return Function(`"use strict"; return (${expr})`)(); }catch(e){return null;}
+  }
+
+  function appendMessage(text, who='jumma', opts={typing:false}){
+    const wrapper = document.createElement('div'); wrapper.className = 'msg ' + (who==='you' ? 'you':'jumma');
+    const bubble = document.createElement('div'); bubble.className = 'bubble ' + (who==='you' ? 'you':'');
+    if(opts.typing){
+      const t = document.createElement('span'); t.className='typing'; t.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+      bubble.appendChild(t);
+    } else {
+      bubble.innerHTML = text.replace(/\n/g,'<br>');
+    }
+    wrapper.appendChild(bubble);
+    chatEl.appendChild(wrapper);
+    chatEl.scrollTop = chatEl.scrollHeight - chatEl.clientHeight;
+    return { wrapper, bubble };
+  }
+
+  function speak(text){
+    if(!enableVoice.checked) return;
+    if(!('speechSynthesis' in window)) return;
+    const ut = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    if(voices.length) ut.voice = voices.find(v=>v.lang.startsWith('en')) || voices[0];
+    ut.rate=1; ut.pitch=1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(ut);
+  }
+
+  function loadHistory(){  
+    const raw = localStorage.getItem(LS_KEY);  
+    if(!raw) return [];  
+    try{ return JSON.parse(raw);}catch(e){return [];}  
+  }
+  function saveHistoryToStorage(arr){ if(!saveHistory.checked) return; localStorage.setItem(LS_KEY, JSON.stringify(arr)); }
+
+  let history = loadHistory();
+  if(history.length){
+    history.forEach(h => appendMessage(h.text, h.who));
+  } else {
+    appendMessage("नमस्ते — I'm Jumma. Ask me about people, Wikipedia, or simple math. Try: wiki:Python (programming language)");
+  }
+
+  async function fetchWikipediaSummary(term){
+    const safe = encodeURIComponent(term.trim());
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${safe}`;
+    try{
+      const res = await fetch(url);
+      if(!res.ok) return null;
+      const data = await res.json();
+      if(data.extract) return data.extract + (data.description? '\n\n' + data.description : '');
+    }catch(e){return null;}
+    return null;
+  }
+
+  const customReplies = {
+    "who made you": "Arhaan is the founder of Jumma AI",
+    "what is your name": "I am Jumma, your pocket AI , coded by Arhaan",
+    "hello": "Hello! How are you today?",
+    "hi": "Hi there! 😊"
+  };
+
+  async function fetchChatGPTReply(msg){
+    try{
+      const res = await fetch('https://your-server.example.com/api/jumma',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({message: msg})
+      });
+      const j = await res.json();
+      return j.reply;
+    }catch(e){
+      console.error(e);
+      return "Sorry, AI service is unavailable.";
+    }
+  }
+
+  async function generateBotReply(msg){
+    const msgLower = msg.trim().toLowerCase();
+
+    // Custom replies
+    if(customReplies[msgLower]) return customReplies[msgLower];
+
+    // Wiki prefix
+    if(/^wiki:\s*/i.test(msg)){
+      const term = msg.replace(/^wiki:\s*/i,'');
+      const s = await fetchWikipediaSummary(term);
+      if(s) return s;
+      return "Sorry, I couldn't find a good Wikipedia summary for that term.";
+    }
+
+    // Direct who is / what is
+    if(/^(who is|what is|tell me about)\b/i.test(msg)){
+      const term = msg.replace(/^(who is|what is|tell me about)\b/i,'').trim();
+      if(term){
+        const s = await fetchWikipediaSummary(term);
+        if(s) return s;
+      }
+    }
+
+    // Math detection
+    if(/^[0-9\s+\-*/().%]+$/.test(msg)){
+      const r = safeEvalMath(msg);
+      if(r !== null) return `Answer: ${r}`;
+      return "I couldn't evaluate that expression safely.";
+    }
+
+    const mathMatch = msg.match(/([0-9\s+\-*/().%]{2,})$/);
+    if(mathMatch){
+      const r = safeEvalMath(mathMatch[1]);
+      if(r !== null) return `Answer: ${r}`;
+    }
+
+    // Fallback: ChatGPT
+    return await fetchChatGPTReply(msg);
+  }
+
+  async function handleSend(){
+    const txt = input.value.trim(); if(!txt) return;
+    appendMessage(txt, 'you');
+    history.push({who:'you', text:txt});
+    saveHistoryToStorage(history);
+    input.value='';
+
+    const { wrapper, bubble } = appendMessage('', 'jumma', {typing:true});
+    chatEl.scrollTop = chatEl.scrollHeight;
+
+    try{
+      const reply = await generateBotReply(txt);
+      bubble.innerHTML = reply.replace(/\n/g,'<br>');
+      history.push({who:'jumma', text:reply});
+      saveHistoryToStorage(history);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      speak(reply);
+    }catch(e){
+      bubble.innerHTML = "Sorry — something went wrong.";
+    }
+  }
+
+  sendBtn.addEventListener('click', handleSend);
+  input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') handleSend(); });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(confirm('Clear conversation?')){
+      chatEl.innerHTML=''; history=[]; localStorage.removeItem(LS_KEY);
+      appendMessage("नमस्ते — I'm Jumma. Ask me about people, Wikipedia, or simple math. Try: wiki:Python (programming language)");
+    }
+  });
+
+  input.focus();
+</script>
+</body>
+</html>
